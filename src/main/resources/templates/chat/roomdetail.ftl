@@ -43,11 +43,12 @@
 <script>
     //alert(document.title);
     // websocket & stomp initialize
-    var sock = new SockJS("/ws-stomp");
-    var ws = Stomp.over(sock);
-    var reconnect = 0;
+    let sock = new SockJS("/ws-stomp");
+    let ws = Stomp.over(sock);
+    
+    let reconnect = 0;
     // vue.js
-    var vm = new Vue({
+    let vm = new Vue({
         el: '#app',
         data: {
             roomId: '',
@@ -62,38 +63,56 @@
             this.findRoom();
         },
         methods: {
-            findRoom: function() {
-                axios.get('/chat/room/'+this.roomId).then(response => { this.room = response.data; });
+            findRoom: function () {
+                axios.get('/chat/room/' + this.roomId).then(response => {
+                    this.room = response.data;
+                });
             },
-            sendMessage: function() {
-                ws.send("/pub/chat/message", {}, JSON.stringify({type:'TALK', roomId:this.roomId, sender:this.sender, message:this.message}));
+            sendMessage: function () {
+                ws.send("/pub/chat/message", {}, JSON.stringify({
+                    type: 'TALK',
+                    roomId: this.roomId,
+                    sender: this.sender,
+                    message: this.message
+                }));
                 this.message = '';
             },
-            recvMessage: function(recv) {
-                this.messages.unshift({"type":recv.type,"sender":recv.type=='ENTER'?'[알림]':recv.sender,"message":recv.message})
+            recvMessage: function (recv) {
+                this.messages.unshift({
+                    "type": recv.type,
+                    "sender": recv.type == 'ENTER' ? '[알림]' : recv.sender,
+                    "message": recv.message
+                });
             }
         }
     });
 
     function connect() {
         // pub/sub event
-        ws.connect({}, function(frame) {
-            ws.subscribe("/sub/chat/room/"+vm.$data.roomId, function(message) {
-                var recv = JSON.parse(message.body);
+        ws.connect({}, function (frame) {
+            ws.subscribe("/sub/chat/room2/" + vm.$data.roomId, function (message) {
+                let recv = JSON.parse(message.body);
+
+                //메세지 저장 변수에서 삭제 > 실제로 변수에다가 저장
                 vm.recvMessage(recv);
             });
-            ws.send("/pub/chat/message", {}, JSON.stringify({type:'ENTER', roomId:vm.$data.roomId, sender:vm.$data.sender}));
-        }, function(error) {
-            if(reconnect++ < 5) {
-                setTimeout(function() {
+            ws.send("/pub/chat/message", {}, JSON.stringify({
+                type: 'ENTER',
+                roomId: vm.$data.roomId,
+                sender: vm.$data.sender
+            }));
+        }, function (error) {
+            if (reconnect++ < 5) {
+                setTimeout(function () {
                     // console.log("connection reconnect");
                     sock = new SockJS("/ws-stomp");
                     ws = Stomp.over(sock);
                     connect();
-                },10*1000);
+                }, 10 * 1000);
             }
         });
     }
+
     connect();
 </script>
 </body>
